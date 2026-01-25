@@ -2,6 +2,9 @@
 
 A lightweight, native macOS menu bar app that displays real-time system metrics with beautiful mini graphs.
 
+<img width="397" height="715" alt="image" src="https://github.com/user-attachments/assets/6868a0ac-1d01-45aa-84d7-8d21dc0daa6b" />
+
+
 ![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -22,34 +25,6 @@ A lightweight, native macOS menu bar app that displays real-time system metrics 
 - **Hover** over any card to reveal a clickable arrow
 - **Click** to open the corresponding system app (Activity Monitor, Disk Utility, System Settings, etc.)
 - **Right-click** the menu bar icon for a quick menu
-
-## Screenshots
-
-The app displays a sleek dark panel with live-updating sparkline graphs:
-
-```
-┌─────────────────────────────────┐
-│ SystemPulse PRO        ↑ 2d 5h │
-├─────────────────────────────────┤
-│ 12.5%  CPU                 ▁▃▅▂ │
-│ M2 Pro • 12 cores    42°C      │
-├─────────────────────────────────┤
-│ 67.2%  Memory              ▅▆▇▆ │
-│ 10.8 / 16 GB                   │
-├─────────────────────────────────┤
-│ 8%     GPU                 ▁▁▂▁ │
-│ M2 Pro                         │
-├─────────────────────────────────┤
-│ ↓ 1.2 MB/s  Network       ▂▄▁▃ │
-│ ↑ 256 KB/s                     │
-├─────────────────────────────────┤
-│ 85%    Disk                    │
-│ 120 GB free of 500 GB          │
-├─────────────────────────────────┤
-│ 72%    Battery                 │
-│ 2h 30m remaining               │
-└─────────────────────────────────┘
-```
 
 ## Requirements
 
@@ -126,19 +101,6 @@ Once running, SystemPulse appears in your menu bar showing CPU and memory usage.
 - **Right-click** for a quick menu with Quit option
 - **Hover** over any metric card to see an arrow indicator
 - **Click** a card to open the related system app
-
-### Card click actions
-
-| Card | Opens |
-|------|-------|
-| CPU | Activity Monitor |
-| Memory | Activity Monitor |
-| GPU | System Information |
-| Network | Network Settings |
-| Disk | Disk Utility |
-| Battery | Battery Settings |
-| Fans | System Information |
-| System | Activity Monitor |
 
 ## Technical details
 
