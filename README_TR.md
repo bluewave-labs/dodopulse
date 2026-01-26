@@ -34,7 +34,7 @@ Gerçek zamanlı sistem metriklerini güzel mini grafiklerle gösteren hafif, ye
 
 ## Kurulum
 
-> **Notarizasyon hakkında:** SystemPulse şu anda Apple tarafından notarize edilmemiştir. Notarizasyon, Apple'ın uygulamaları dağıtımdan önce kötü amaçlı yazılım için tarayan güvenlik sürecidir. Bu olmadan, macOS ilk açılışta bir uyarı gösterir. Kodu kendiniz inceleyebileceğiniz SystemPulse gibi açık kaynak uygulamalar için bunu atlamak güvenlidir. Notarizasyon gelecek bir sürüm için planlanmaktadır.
+> **Notarizasyon hakkında:** SystemPulse şu anda Apple tarafından notarize edilmemiştir. Notarizasyon, Apple'ın uygulamaları dağıtımdan önce kötü amaçlı yazılım için tarayan güvenlik sürecidir. Bu olmadan, macOS "uygulama hasarlı" veya "açılamıyor" gibi uyarılar gösterebilir. Kodu kendiniz inceleyebileceğiniz SystemPulse gibi açık kaynak uygulamalar için bunu atlamak güvenlidir. **Çözüm:** Terminal'de `xattr -cr /Applications/SystemPulse.app` komutunu çalıştırın, ardından uygulamayı açın. Notarizasyon gelecek bir sürüm için planlanmaktadır.
 
 ### Seçenek 1: Homebrew (önerilen)
 

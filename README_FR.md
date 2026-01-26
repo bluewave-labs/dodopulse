@@ -34,7 +34,7 @@ Une application légère et native pour la barre de menus macOS qui affiche les 
 
 ## Installation
 
-> **À propos de la notarisation :** SystemPulse n'est actuellement pas notarisé par Apple. La notarisation est le processus de sécurité d'Apple qui analyse les applications à la recherche de logiciels malveillants avant leur distribution. Sans elle, macOS affiche un avertissement au premier lancement. Il est sûr de contourner cela pour les applications open source comme SystemPulse où vous pouvez inspecter le code vous-même. La notarisation est prévue pour une version future.
+> **À propos de la notarisation :** SystemPulse n'est actuellement pas notarisé par Apple. La notarisation est le processus de sécurité d'Apple qui analyse les applications à la recherche de logiciels malveillants avant leur distribution. Sans elle, macOS peut afficher des avertissements comme "l'app est endommagée" ou "ne peut pas être ouverte". Il est sûr de contourner cela pour les applications open source comme SystemPulse où vous pouvez inspecter le code vous-même. **Solution :** Exécutez `xattr -cr /Applications/SystemPulse.app` dans le Terminal, puis ouvrez l'app. La notarisation est prévue pour une version future.
 
 ### Option 1 : Homebrew (recommandé)
 

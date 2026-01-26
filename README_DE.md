@@ -34,7 +34,7 @@ Eine leichte, native macOS-Menüleisten-App, die Echtzeit-Systemmetriken mit sch
 
 ## Installation
 
-> **Über Notarisierung:** SystemPulse ist derzeit nicht von Apple notarisiert. Notarisierung ist Apples Sicherheitsprozess, der Apps vor der Verteilung auf Malware überprüft. Ohne sie zeigt macOS beim ersten Start eine Warnung an. Bei Open-Source-Apps wie SystemPulse, wo Sie den Code selbst überprüfen können, ist es sicher, diese zu umgehen. Notarisierung ist für eine zukünftige Version geplant.
+> **Über Notarisierung:** SystemPulse ist derzeit nicht von Apple notarisiert. Notarisierung ist Apples Sicherheitsprozess, der Apps vor der Verteilung auf Malware überprüft. Ohne sie kann macOS Warnungen wie "App ist beschädigt" oder "kann nicht geöffnet werden" anzeigen. Bei Open-Source-Apps wie SystemPulse, wo Sie den Code selbst überprüfen können, ist es sicher, diese zu umgehen. **Lösung:** Führen Sie `xattr -cr /Applications/SystemPulse.app` im Terminal aus, dann öffnen Sie die App. Notarisierung ist für eine zukünftige Version geplant.
 
 ### Option 1: Homebrew (empfohlen)
 
