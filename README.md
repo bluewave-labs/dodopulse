@@ -35,7 +35,7 @@ A lightweight, native macOS menu bar app that displays real-time system metrics 
 
 ## Installation
 
-> **About notarization:** SystemPulse is not currently notarized by Apple. Notarization is Apple's security process that scans apps for malware before distribution. Without it, macOS shows a warning on first launch. This is safe to bypass for open-source apps like SystemPulse where you can inspect the code yourself. Notarization is planned for a future release.
+> **About notarization:** SystemPulse is not currently notarized by Apple. Notarization is Apple's security process that scans apps for malware before distribution. Without it, macOS may show warnings like "app is damaged" or "can't be opened". This is safe to bypass for open-source apps like SystemPulse where you can inspect the code yourself. **Fix:** Run `xattr -cr /Applications/SystemPulse.app` in Terminal, then open the app. Notarization is planned for a future release.
 
 ### Option 1: Homebrew (recommended)
 
