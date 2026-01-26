@@ -39,8 +39,13 @@ struct L10n {
                let lang = Language(rawValue: code) {
                 return lang
             }
-            // Auto-detect from system
-            let systemLang = Locale.current.language.languageCode?.identifier ?? "en"
+            // Auto-detect from system (compatible with macOS 12+)
+            let systemLang: String
+            if #available(macOS 13, *) {
+                systemLang = Locale.current.language.languageCode?.identifier ?? "en"
+            } else {
+                systemLang = Locale.current.languageCode ?? "en"
+            }
             return Language(rawValue: systemLang) ?? .english
         }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: "appLanguage") }

@@ -18,10 +18,24 @@ mkdir -p "$BUILD_DIR"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
-# Compile the Swift file
-echo "Compiling..."
+# Compile the Swift file as universal binary (arm64 + x86_64)
+echo "Compiling universal binary..."
 swiftc -O -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME" SystemPulse.swift \
+    -target arm64-apple-macos12.0 \
     -framework Cocoa -framework IOKit -framework Metal
+
+swiftc -O -o "$APP_BUNDLE/Contents/MacOS/${APP_NAME}_x86" SystemPulse.swift \
+    -target x86_64-apple-macos12.0 \
+    -framework Cocoa -framework IOKit -framework Metal
+
+# Create universal binary
+lipo -create \
+    "$APP_BUNDLE/Contents/MacOS/$APP_NAME" \
+    "$APP_BUNDLE/Contents/MacOS/${APP_NAME}_x86" \
+    -output "$APP_BUNDLE/Contents/MacOS/${APP_NAME}_universal"
+
+mv "$APP_BUNDLE/Contents/MacOS/${APP_NAME}_universal" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+rm "$APP_BUNDLE/Contents/MacOS/${APP_NAME}_x86"
 
 # Create Info.plist
 cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
