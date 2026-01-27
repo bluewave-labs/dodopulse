@@ -512,6 +512,34 @@ class AppleSiliconThermal {
     }
 }
 
+// MARK: - Brightness Monitor (cached library handle)
+
+class BrightnessMonitor {
+    typealias DisplayServicesGetBrightnessFunc = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Float>) -> Int32
+
+    private var displayServicesHandle: UnsafeMutableRawPointer?
+    private var getBrightnessFunc: DisplayServicesGetBrightnessFunc?
+
+    init() {
+        // Load library once at startup
+        displayServicesHandle = dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY)
+        if let handle = displayServicesHandle, let sym = dlsym(handle, "DisplayServicesGetBrightness") {
+            getBrightnessFunc = unsafeBitCast(sym, to: DisplayServicesGetBrightnessFunc.self)
+        }
+    }
+
+    deinit {
+        if let handle = displayServicesHandle { dlclose(handle) }
+    }
+
+    func getBrightness() -> Float {
+        guard let getFunc = getBrightnessFunc else { return -1 }
+        var brightness: Float = 0
+        let result = getFunc(CGMainDisplayID(), &brightness)
+        return result == 0 && brightness >= 0 ? brightness : -1
+    }
+}
+
 // MARK: - Metrics
 
 class Metrics {
@@ -556,6 +584,15 @@ class Monitor {
     private var metalDevice: MTLDevice?
     private let smc = SMCService()
     private var externalIPFetched = false
+    private let brightnessMonitor = BrightnessMonitor()
+
+    // Update counters for tiered updates
+    private var updateCounter: Int = 0
+
+    // Cached values with timestamps
+    private var lastSSDCheck: Date = .distantPast
+    private var lastDiskCheck: Date = .distantPast
+    private var lastBatteryCheck: Date = .distantPast
 
     init() {
         metalDevice = MTLCreateSystemDefaultDevice()
@@ -575,14 +612,87 @@ class Monitor {
         metrics.kernelVersion = String(cString: kernVersion)
     }
 
-    func update() {
-        updateCPU(); updateMemory(); updateNetwork(); updateDisk(); updateBattery(); updateSystem(); updateGPU(); updateSensors()
-        // Skipping external IP fetch - using fake IP for screenshots
-        if !externalIPFetched { externalIPFetched = true; fetchExternalIP() }
+    // Fast update - called every second (CPU, network only)
+    func updateFast() {
+        updateCPU()
+        updateNetwork()
         metrics.cpuHistory.append(metrics.cpu); if metrics.cpuHistory.count > 60 { metrics.cpuHistory.removeFirst() }
+        metrics.netHistory.append(metrics.netIn + metrics.netOut); if metrics.netHistory.count > 60 { metrics.netHistory.removeFirst() }
+    }
+
+    // Medium update - called every 2 seconds (memory, GPU)
+    func updateMedium() {
+        updateMemory()
+        updateGPU()
         metrics.memHistory.append(metrics.mem); if metrics.memHistory.count > 60 { metrics.memHistory.removeFirst() }
         metrics.gpuHistory.append(metrics.gpu); if metrics.gpuHistory.count > 60 { metrics.gpuHistory.removeFirst() }
-        metrics.netHistory.append(metrics.netIn + metrics.netOut); if metrics.netHistory.count > 60 { metrics.netHistory.removeFirst() }
+    }
+
+    // Slow update - called every 3 seconds (temperature, fans)
+    func updateSlow() {
+        updateSensors()
+    }
+
+    // Very slow update - called every 10 seconds (battery, system info)
+    func updateVerySlow() {
+        updateBattery()
+        updateSystem()
+        updateBrightness()
+    }
+
+    // Glacial update - called every 30 seconds (disk, SSD health)
+    func updateGlacial() {
+        updateDisk()
+        updateSSDHealthCached()
+        if !externalIPFetched { externalIPFetched = true; fetchExternalIP() }
+    }
+
+    // Legacy single update function for compatibility
+    func update() {
+        updateCounter += 1
+
+        // Fast updates - every call (1s)
+        updateFast()
+
+        // Medium updates - every 2 calls (2s)
+        if updateCounter % 2 == 0 {
+            updateMedium()
+        }
+
+        // Slow updates - every 3 calls (3s)
+        if updateCounter % 3 == 0 {
+            updateSlow()
+        }
+
+        // Very slow updates - every 10 calls (10s)
+        if updateCounter % 10 == 0 {
+            updateVerySlow()
+        }
+
+        // Glacial updates - every 30 calls (30s)
+        if updateCounter % 30 == 0 {
+            updateGlacial()
+        }
+
+        // First run - do everything
+        if updateCounter == 1 {
+            updateMedium()
+            updateSlow()
+            updateVerySlow()
+            updateGlacial()
+        }
+
+        // Reset counter to prevent overflow
+        if updateCounter >= 300 { updateCounter = 0 }
+    }
+
+    // Background update - minimal work when panel is hidden
+    func updateBackground() {
+        updateCPU()
+        updateMemory()
+        // Only update history, skip everything else
+        metrics.cpuHistory.append(metrics.cpu); if metrics.cpuHistory.count > 60 { metrics.cpuHistory.removeFirst() }
+        metrics.memHistory.append(metrics.mem); if metrics.memHistory.count > 60 { metrics.memHistory.removeFirst() }
     }
 
     private func updateCPU() {
@@ -742,81 +852,43 @@ class Monitor {
         metrics.fanSpeed = []
         for i in 0..<2 { if let rpm = smc.getFanSpeed(fan: i), rpm > 0 { metrics.fanSpeed.append(rpm) } }
 
-        // Update screen brightness
-        updateBrightness()
-
-        // Update power consumption
+        // Update power consumption (relatively cheap)
         updatePowerConsumption()
 
-        // Update CPU frequency (if available)
+        // Update CPU frequency (if available, cheap sysctl call)
         updateCPUFrequency()
 
-        // Update SSD health
-        updateSSDHealth()
+        // Note: brightness and SSD health are now on separate slower timers
     }
 
     private func updateBrightness() {
-        // Try multiple methods to get display brightness
-        var brightness: Float = -1
+        // Use cached brightness monitor (no dlopen/dlclose overhead)
+        let brightness = brightnessMonitor.getBrightness()
+        if brightness >= 0 {
+            metrics.screenBrightness = Double(brightness * 100)
+            return
+        }
 
-        // Method 1: Use DisplayServices framework (works on most Macs)
-        // DisplayServicesGetBrightness is a private API but widely used
-        typealias DisplayServicesGetBrightnessFunc = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Float>) -> Int32
-        if let displayServices = dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY) {
-            if let getBrightness = dlsym(displayServices, "DisplayServicesGetBrightness") {
-                let getBrightnessFunc = unsafeBitCast(getBrightness, to: DisplayServicesGetBrightnessFunc.self)
+        // Fallback to IODisplayGetFloatParameter (less frequent since this is called every 10s now)
+        var iterator: io_iterator_t = 0
+        let result = IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IODisplayConnect"), &iterator)
+        if result == kIOReturnSuccess {
+            defer { IOObjectRelease(iterator) }
+            var service = IOIteratorNext(iterator)
+            while service != 0 {
                 var brightnessValue: Float = 0
-                let result = getBrightnessFunc(CGMainDisplayID(), &brightnessValue)
-                if result == 0 && brightnessValue >= 0 {
-                    brightness = brightnessValue
-                }
-            }
-            dlclose(displayServices)
-        }
-
-        // Method 2: Fallback to IODisplayGetFloatParameter
-        if brightness < 0 {
-            var iterator: io_iterator_t = 0
-            let result = IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IODisplayConnect"), &iterator)
-            if result == kIOReturnSuccess {
-                var service = IOIteratorNext(iterator)
-                while service != 0 {
-                    var brightnessValue: Float = 0
-                    IODisplayGetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, &brightnessValue)
-                    if brightnessValue > 0 {
-                        brightness = brightnessValue
-                    }
+                IODisplayGetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, &brightnessValue)
+                if brightnessValue > 0 {
+                    metrics.screenBrightness = Double(brightnessValue * 100)
                     IOObjectRelease(service)
-                    service = IOIteratorNext(iterator)
+                    return
                 }
-                IOObjectRelease(iterator)
+                IOObjectRelease(service)
+                service = IOIteratorNext(iterator)
             }
         }
 
-        // Method 3: Try backlight through IOKit
-        if brightness < 0 {
-            var iterator: io_iterator_t = 0
-            let matchDict = IOServiceMatching("AppleBacklightDisplay")
-            if IOServiceGetMatchingServices(kIOMainPortDefault, matchDict, &iterator) == kIOReturnSuccess {
-                var service = IOIteratorNext(iterator)
-                while service != 0 {
-                    var props: Unmanaged<CFMutableDictionary>?
-                    if IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0) == kIOReturnSuccess,
-                       let properties = props?.takeRetainedValue() as? [String: Any] {
-                        if let brightnessDict = properties["brightness"] as? [String: Any],
-                           let value = brightnessDict["value"] as? Int,
-                           let max = brightnessDict["max"] as? Int, max > 0 {
-                            brightness = Float(value) / Float(max)
-                        }
-                    }
-                    IOObjectRelease(service)
-                    service = IOIteratorNext(iterator)
-                }
-                IOObjectRelease(iterator)
-            }
-        }
-
-        metrics.screenBrightness = brightness >= 0 ? Double(brightness * 100) : -1
+        metrics.screenBrightness = -1
     }
 
     private func updatePowerConsumption() {
@@ -852,6 +924,14 @@ class Monitor {
                 metrics.cpuFrequencyMHz = Int(freq / 1_000_000)
             }
         }
+    }
+
+    private func updateSSDHealthCached() {
+        // Only check every 60 seconds - SSD health doesn't change often
+        guard Date().timeIntervalSince(lastSSDCheck) > 60 else { return }
+        lastSSDCheck = Date()
+
+        updateSSDHealth()
     }
 
     private func updateSSDHealth() {
@@ -1324,6 +1404,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var menu: NSMenu!
     var eventMonitor: Any?
     var showDetailsMenuItem: NSMenuItem!
+    var isPanelVisible = false
+    var backgroundUpdateCounter = 0
 
     func createMenuBarIcon() -> NSImage {
         // Create a monitor/display icon (similar to Lucide's "monitor" icon)
@@ -1487,13 +1569,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func update() {
-        monitor.update()
-        updateMenuBarDisplay()
-
-        if panel.isVisible {
+        if isPanelVisible {
+            // Full update when panel is visible
+            monitor.update()
             contentView.metrics = monitor.metrics
             contentView.needsDisplay = true
+        } else {
+            // Minimal background update - only CPU/memory for menu bar, every 2 seconds
+            backgroundUpdateCounter += 1
+            if backgroundUpdateCounter % 2 == 1 {  // Update on odd counts (1, 3, 5...) = every 2s starting immediately
+                monitor.updateBackground()
+            }
+            // Reset counter
+            if backgroundUpdateCounter >= 100 { backgroundUpdateCounter = 0 }
         }
+        updateMenuBarDisplay()
     }
 
     @objc func handleClick() {
@@ -1502,6 +1592,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Close panel first if it's open
             if panel.isVisible {
                 panel.orderOut(nil)
+                isPanelVisible = false
                 if let monitor = eventMonitor {
                     NSEvent.removeMonitor(monitor)
                     eventMonitor = nil
@@ -1514,6 +1605,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func togglePanel() {
         if panel.isVisible {
             panel.orderOut(nil)
+            isPanelVisible = false
             if let monitor = eventMonitor {
                 NSEvent.removeMonitor(monitor)
                 eventMonitor = nil
@@ -1530,14 +1622,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             panel.setFrame(NSRect(x: x, y: y, width: 380, height: height), display: true)
             contentView.frame = NSRect(x: 0, y: 0, width: 380, height: height)
+
+            // Immediately do a full update when panel opens
+            monitor.update()
             contentView.metrics = monitor.metrics
             contentView.needsDisplay = true
+
             panel.orderFront(nil)
             panel.makeKey()  // Make panel key to receive mouse events
+            isPanelVisible = true
 
             // Close when clicking outside
             eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
                 self?.panel.orderOut(nil)
+                self?.isPanelVisible = false
                 if let monitor = self?.eventMonitor {
                     NSEvent.removeMonitor(monitor)
                     self?.eventMonitor = nil
