@@ -199,3 +199,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Acknowledgments
 
 Built with Swift and AppKit for native macOS performance.
+
+---
+
+Part of the Dodo app family ([DodoPulse](https://github.com/bluewave-labs/dodopulse), [DodoTidy](https://github.com/bluewave-labs/dodotidy), [DodoClip](https://github.com/bluewave-labs/dodoclip), [DodoNest](https://github.com/bluewave-labs/dodonest))
