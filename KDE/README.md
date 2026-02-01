@@ -12,6 +12,8 @@ KDE/
 ├── uninstall.sh          # Uninstall script
 ├── README.md             # English documentation
 ├── README_TR.md          # Turkish documentation
+├── img/
+│   └── example.png       # Screenshot
 └── contents/
     ├── config/
     │   ├── config.qml    # Configuration menu
@@ -30,6 +32,8 @@ KDE/
 
 ![KDE Plasma](https://img.shields.io/badge/KDE_Plasma-5.x%20|%206.x-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
+
+![DodoPulse Screenshot](img/example.png)
 
 ## Features
 

@@ -12,6 +12,8 @@ KDE/
 ├── uninstall.sh          # Kaldırma scripti
 ├── README.md             # İngilizce dokümantasyon
 ├── README_TR.md          # Türkçe dokümantasyon
+├── img/
+│   └── example.png       # Ekran görüntüsü
 └── contents/
     ├── config/
     │   ├── config.qml    # Yapılandırma menüsü
@@ -30,6 +32,8 @@ KDE/
 
 ![KDE Plasma](https://img.shields.io/badge/KDE_Plasma-5.x%20|%206.x-blue)
 ![Lisans](https://img.shields.io/badge/Lisans-MIT-green)
+
+![DodoPulse Ekran Görüntüsü](img/example.png)
 
 ## Özellikler
 
