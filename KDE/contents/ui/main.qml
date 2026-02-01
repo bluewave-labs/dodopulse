@@ -489,7 +489,7 @@ PlasmoidItem {
         onTriggered: {
             exec.run("disk", "df -B1 / 2>/dev/null | tail -1")
             exec.run("disks", "df -B1 -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null | tail -n +2")
-            exec.run("gpu", "nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null || cat /sys/class/drm/card*/device/gpu_busy_percent 2>/dev/null || echo '0'")
+            exec.run("gpu", "nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null || cat /sys/class/drm/card*/device/gpu_busy_percent 2>/dev/null || (ACT=$(cat /sys/class/drm/card*/gt_act_freq_mhz 2>/dev/null | head -1); MAX=$(cat /sys/class/drm/card*/gt_max_freq_mhz 2>/dev/null | head -1); [ -n \"$ACT\" ] && [ -n \"$MAX\" ] && [ \"$MAX\" -gt 0 ] && echo $((ACT * 100 / MAX)) || echo '0')")
             exec.run("battery", "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1; echo '---'; cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -1; echo '---'; cat /sys/class/power_supply/AC*/online 2>/dev/null || cat /sys/class/power_supply/ADP*/online 2>/dev/null || echo '0'")
             exec.run("temp", "cat /sys/class/hwmon/hwmon*/temp1_input 2>/dev/null | head -1 || cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null")
             exec.run("ip", "ip -4 addr show 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | head -1 | awk '{print $2}' | cut -d/ -f1")
